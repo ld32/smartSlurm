@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#set -x
+set -x
 
 Usage="Usage: $0 full_path_to_flag_folder \n  Note: this script will go through job id list file, find the downstream jobs, and return them as a string of job flags. "
 
@@ -12,6 +12,15 @@ smartSlurmLogDir=$1
 
 [ -f $smartSlurmLogDir/allJobs.txt ] || { echo -e "job id file $smartSlurmLogDir/allJobs.txt does not exist\n$Usage"; exit 1; }
 
+
+while true; do
+    if `mkdir $smartSlurmLogDir/downsteamjob.adjusting  2>/dev/null`; then
+        break
+    fi
+    sleep 1
+done 
+
+date
 # jobid, deps, flag, software, ref, input, inputSize
 text=`cat $smartSlurmLogDir/allJobs.txt`
 
@@ -27,18 +36,15 @@ IFS=$' ';
 
 #echo
 
-while true; do
-    if `mkdir $smartSlurmLogDir/downsteamjob.adjusting  2>/dev/null`; then
-        break
-    fi
-    sleep 1
-done 
-
 # directly get id, deps, software, ref, and input here, if input is none, directly skip this job
 output=`echo $text | awk '{if ($2 ~ /'"$SLURM_JOBID/"') print $1, $2, $3, $4, $5, $6;}'`
 
 echo -e "Jobs on the same dependency level with current job:\n$output"
-[ -z "$output" ] && { echo -e "Downstream job ids not found for $SLURM_JOBID"; exit; }
+if [ -z "$output" ]; then
+    echo -e "Downstream job ids not found for $SLURM_JOBID"
+    rm -r $smartSlurmLogDir/downsteamjob.adjusting 
+    exit
+fi 
 
 IFS=$'\n';
 for i in $output; do
@@ -52,9 +58,6 @@ for i in $output; do
     ref=${arrIN[4]}  ; ref=${ref//\//-}
     inputs=${arrIN[5]}
 
-    
-    
-    
     #[ -f $smartSlurmJobRecordDir/stats/extraMem.$software.$ref ] && extraMem=`sort $smartSlurmJobRecordDir/stats/extraMem.$software.$ref | tail -n1`
     #[ -f $smartSlurmJobRecordDir/stats/extraMem.$software.$ref ] && maxExtra=`sort -n $smartSlurmJobRecordDir/stats/extraMem.$software.$ref | tail -n1 | cut -d' ' -f1` && oomCount=`wc -l $smartSlurmJobRecordDir/stats/extraMem.$software.$ref | cut -d' ' -f1` && extraMem=$(( $maxExtra * $oomCount ))
 
@@ -70,7 +73,6 @@ for i in $output; do
         [ -f "$smartSlurmLogDir/$job.success" ] && echo This job was done! $job || { echo This job is not done yet: $job; allDone=no; break;}
     done
 
-    
 
     if [ -z "$allDone" ]; then
         date
@@ -270,3 +272,4 @@ for i in $output; do
 done
 
 rm -r $smartSlurmLogDir/downsteamjob.adjusting 
+date

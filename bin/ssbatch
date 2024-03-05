@@ -650,7 +650,7 @@ fi
 #echoerr
 
 # for OOM memtesting
-#mem=2
+mem=2
 
 [ -z "$min" ] && { echoerr did not find time limit; exit 1; }
 
@@ -678,7 +678,7 @@ adjustPartition $(( ( $min + 59 ) / 60 )) $partition
 seconds=$(( $min * 60 ))
 
 # timetesting
-#seconds=65
+seconds=65
 
 #set +x
 #[ $seconds -le 60 ] && time=11:0 && seconds=60
@@ -706,8 +706,12 @@ echoerr
 echoerr Building new sbatch command ...
 #echo "#!/bin/bash" > $job
 
-echo -e "#!/bin/bash\ndate\n\ntrap \"{ cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime; }\" EXIT\nmemCpuMonitor.sh $flag $mem $min $memO $core &\n" > $job
+#echo -e "#!/bin/bash\ndate\n\ntrap \"{ cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime; }\" EXIT\nmemCpuMonitor.sh $flag $mem $min $memO $core &\n" > $job
 
+#echo -e "#!/bin/bash\ndate\n\nmemCpuMonitor.sh $flag $mem $min $memO $core &\n" > $job
+
+echo -e "#!/bin/bash\n"> $job
+echo "set -x" >> $job 
 
 # [[ "$mem" == *G ]] && totalM=$(( 1024 * ${mem%G})) || totalM=${mem%M}
 
@@ -769,8 +773,18 @@ if [ -z "$slurmScript" ]; then
 
         echo "srun -n 1 $slurmAcc sh -e -c \"checkpoint.sh \\\"sh ${job%.sh}.cmd\\\" $flag $mem $min $extraMem \"" >> $job
     else
-        echo "srun -n 1 $slurmAcc sh -e -o pipefail -c '$wrapCMD; ' && touch $succFlag" >> $job
-        
+        #cleanUpPath=`which cleanUp.sh`
+
+        #echo "cat <<EOF > epilog_script.sh" >> $job 
+        #echo "#!/bin/bash" >> $job 
+        #echo "cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \"${slurmAcc#*-A }\" \"$inputs\" $extraMem $defaultExtraTime" >> $job 
+        #echo EOF >> $job 
+
+        #echo "chmod +x epilog_script.sh" >> $job 
+        #echo "srun --debug -n 1 $slurmAcc --epilog=\"/n/scratch/users/l/ld32/smartSlurmTest/sleep.sh\" sh -c 'set -o pipefail; $wrapCMD; ' && touch $succFlag" >> $job
+        echo "srun  --epilog=\"/n/scratch/users/l/ld32/smartSlurmTest/sleep.sh\" --wait=120  sleep 200" >> $job
+        #echo "srun --debug --no-kill -n 1 $slurmAcc cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \"${slurmAcc#*-A }\" \"$inputs\" $extraMem $defaultExtraTime" >> $job
+
     fi
 else
     grep "^#SBATCH" $slurmScript >> $job || true >> $job

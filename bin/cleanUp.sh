@@ -618,3 +618,5 @@ echo
 
 # wait for email to be sent
 sleep 5
+
+[ -f $succFile ] || exit 1 
