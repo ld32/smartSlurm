@@ -1,10 +1,12 @@
 #!/bin/bash
 
-#set -x
+set -x
 
 echo Running: $0 $@
 cd $smartSlurmLogDir #`dirname $1` #${1%/$smartSlurmLogDir/*}
 #echo pwd `pwd`
+
+rm $SLURM_JOBID.directly.resubmit.oot* >> /dev/null
 
 # requeue failed jobs
 #if ls $smartSlurmLogDir/*.requeueCMD 2>/dev/null && mkdir $smartSlurmLogDir/requeue.start; then
@@ -27,8 +29,9 @@ counter=0
 
 jobName=$1 #`basename $1` #${1#*/$smartSlurmLogDir/}
 #reservedMem=$2
-reservedTime=$3
-defaultMem=$4
+#reservedTime=$3
+reservedTime=$9
+defaultMem=$6
 
 [ -z "$jobName" ] && jobName=nothing
 
@@ -49,7 +52,7 @@ reservedMem=$SLURM_MEM_PER_NODE
 
 [ -z "$reservedTime" ] && reservedTime=0; 
 
-cancelMailSent=""
+#cancelMailSent=""
 
 function calculate_resource_usage {
     local pid=$1
@@ -114,14 +117,27 @@ while true; do
         exit
     fi
 
-   	if [ -z "$cancelMailSent" ] && [ "$reservedTime" -ge 120 ]; then
-        CURRENT=`date +%s`
-        min=$(( $reservedTime - ($CURRENT - $START + 59)/60))
-        if [ $min -le 15 ]; then
-            echo "$SLURM_JOB_ID is running out of time. Please contact admin to rextend." | mail -s "$SLURM_JOB_ID is running out of time" $USER
-            cancelMailSent=yes
-        fi
-    fi
+   	# if [ -z "$cancelMailSent" ] && [ "$reservedTime" -ge 120 ]; then
+    #     CURRENT=`date +%s`
+    #     min=$(( $reservedTime - ($CURRENT - $START + 59)/60))
+    #     if [ $min -le 15 ]; then
+    #         echo "$SLURM_JOB_ID is running out of time. Please contact admin to rextend." | mail -s "$SLURM_JOB_ID is running out of time" $USER
+    #         cancelMailSent=yes
+    #     fi
+    # fi
+
+
+    timeR=$(($(date +%s) - START))
+    #if [ -f $jobName.success ] || [ -f $jobName.failed ] || [ $reservedMem -le $((total_memory_usage + 5)) ] || [ $(( reservedTime * 60 - $timeR )) -lt 180 ] ; then 
+
+    if [ $(( reservedTime * 60 - $timeR )) -lt 300 ]  && [ ! -f $jobName.success ]; then 
+        touch $SLURM_JOBID.directly.resubmit.oot
+        cleanUp.sh $1 $2 $3 $4 $5 $6 $7 $8 $9 "${10}"  "${11}" ${12} ${13}
+        touch $SLURM_JOBID.directly.resubmit.oot.cleanup.done
+        exit
+    else 
+        echo no
+    fi 
     sleep 5
 done
 

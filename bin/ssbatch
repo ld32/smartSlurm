@@ -644,20 +644,18 @@ else
         resAjust="$resAjust#Use default mem and time. Has input, but this job depends on $deps."
 
     fi
-    echo -e "$resAjust\n" > $outFlag
+   
 fi
 
 #echoerr
 
-# for OOM memtesting
-#mem=2
+
 
 [ -z "$min" ] && { echoerr did not find time limit; exit 1; }
 
 [ -z "$mem" ] && { echoerr did not find mem limit; exit 1; }
 
 
-#time=$min
 
 #[[ "$time" == *-* ]] && { day=${time%-*}; tem=${time#*-}; hour=${tem%%:*}; min=${tem#*:}; min=${min%%:*}; sec=${tem#$hour:$min}; sec=${sec#:}; } || { [[ "$time" =~ ^[0-9]+$ ]] && min=$time || { sec=${time##*:}; min=${time%:*}; min=${min##*:}; hour=${time%$min:$sec}; hour=${hour%:}; day=0;} }
 
@@ -668,17 +666,23 @@ fi
 #echoerr looking partition for hour: $hours ##
 
 # at least 100M and 10 minutes
-#[ "$mem" -lt 100 ] && mem=100
+[ "$mem" -lt 100 ] && mem=100 && resAjust="$resAjust\n#Mem is reset to 100M. "
 
-#[ "$min" -lt 10 ] && min=10
+[ "$min" -lt 10 ] && min=10 && resAjust="$resAjust\n#Time is reset to 10min. "
+
+echo -e "$resAjust\n" > $outFlag
+
+# testtime
+min=6
+# testmem
+#mem=4000
 
 adjustPartition $(( ( $min + 59 ) / 60 )) $partition
 
 # 10 minutes less than the time in sbatch command
 seconds=$(( $min * 60 ))
 
-# timetesting
-#seconds=65
+
 
 #set +x
 #[ $seconds -le 60 ] && time=11:0 && seconds=60
@@ -706,7 +710,9 @@ echoerr
 echoerr Building new sbatch command ...
 #echo "#!/bin/bash" > $job
 
-echo -e "#!/bin/bash\ndate\n\ntrap \"{ cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime; }\" EXIT\nmemCpuMonitor.sh $flag $mem $min $memO $core &\n" > $job
+#echo -e "#!/bin/bash\ndate\n\ntrap \"{ cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime; }\" EXIT\nmemCpuMonitor.sh $flag $mem $min $memO $core &\n" > $job
+
+echo -e "#!/bin/bash\ndate\n\ntrap \"{ cleanUp.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition  \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime; }\" EXIT\nmemCpuMonitor.sh $flag $software ${ref//\//-} $inputSize $core $memO $minO $mem $min $partition \\\"${slurmAcc#*-A }\\\" \\\"$inputs\\\" $extraMem $defaultExtraTime &\n" > $job
 
 
 # [[ "$mem" == *G ]] && totalM=$(( 1024 * ${mem%G})) || totalM=${mem%M}
@@ -805,7 +811,7 @@ fi
 # [ -f $outFlag ] && [ ! -z "$out" ] && [[ ! $outFlag == "$out" ]] && echo ln -s $outFlag $out >> $job
 # [ -f $errFlag ] && [ ! -z "$err" ] && [[ ! $errFlag == "$err" ]] && echo ln -s $errFlag $err >> $job
 
-# testing
+# testmem
 #mem=2000M
 
 #if [ -z "$smartSlurmLogDir/" ]; then

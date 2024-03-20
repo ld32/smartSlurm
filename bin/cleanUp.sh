@@ -1,6 +1,10 @@
 #!/bin/bash
 
-#set -x
+set -x
+
+############## 
+# This file is created by memCPUMonitor.sh
+[ -f $smartSlurmLogDir/$SLURM_JOBID.directly.resubmit.oot.cleanup.done ] && exit  
 
 # to call this:  0     1         2       3       4          5       6       7      8     9      10         11       12     13     14
 #cleanUp.sh          "flag "software" "$ref" "$inputSize" $core   $memO  $timeO   $mem  $time  $partition slurmAcc  inputs extraM extraTime smartSlurmJobRecordDir
@@ -172,6 +176,10 @@ else
        jobStatus="Unknown"
    fi
 fi
+
+############## 
+# This file is created by memCPUMonitor.sh
+[ -f $smartSlurmLogDir/$SLURM_JOBID.directly.resubmit.oot ] && jobStatus="OOT"
 
 echo jobStatus: $jobStatus
 
